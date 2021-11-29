@@ -1,23 +1,6 @@
-def partial_train():
-    pass
-
-
-def evaluate():
-    pass
-
-def full_train():
-    pass
-
-
 import csv
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-import os
-import PIL
 import tensorflow as tf
-
-from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
@@ -35,6 +18,8 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
   seed=123,
   image_size=(img_height, img_width),
   batch_size=batch_size)
+
+class_names = train_ds.class_names
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
   data_dir,
@@ -69,7 +54,7 @@ model.compile(optimizer='adam',
 
 model.summary()
 
-epochs = 10
+epochs = 20
 history = model.fit(
   train_ds,
   validation_data=val_ds,
@@ -78,11 +63,11 @@ history = model.fit(
 model.save('./model')
 
 
-output_labels = []
+output_data = []
 with open('test.csv') as file:
   csv_reader = csv.reader(file)
   for row in csv_reader:
-    image_path = cv2.imread(f"test/{row[0]}")
+    image_path = f"test/{row[0]}"
     img = tf.keras.utils.load_img(
       image_path, target_size=(img_height, img_width)
     )
@@ -92,5 +77,9 @@ with open('test.csv') as file:
     predictions = model.predict(img_array)
     score = tf.nn.softmax(predictions[0])
     label = np.argmax(score)
-    output_labels.append(label)
+    output_data.append([row[0], int(class_names[label])])
 
+with open('output.csv', 'w') as file:
+  writer = csv.writer(file, delimiter=',')
+  for output_row in output_data:
+      writer.writerow(output_row)
