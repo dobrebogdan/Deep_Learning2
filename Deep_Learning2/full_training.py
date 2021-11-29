@@ -4,7 +4,6 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
-
 batch_size = 32
 img_height = 128
 img_width = 55
@@ -13,27 +12,15 @@ num_classes = 5
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
   data_dir,
-  validation_split=0.1,
-  subset="training",
   seed=123,
   image_size=(img_height, img_width),
   batch_size=batch_size)
 
 class_names = train_ds.class_names
 
-val_ds = tf.keras.utils.image_dataset_from_directory(
-  data_dir,
-  validation_split=0.1,
-  subset="validation",
-  seed=123,
-  image_size=(img_height, img_width),
-  batch_size=batch_size)
-
 AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
-
 
 model = Sequential([
   layers.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
@@ -57,7 +44,6 @@ model.summary()
 epochs = 20
 history = model.fit(
   train_ds,
-  validation_data=val_ds,
   epochs=epochs
 )
 model.save('./model')
@@ -81,5 +67,6 @@ with open('test.csv') as file:
 
 with open('output.csv', 'w') as file:
   writer = csv.writer(file, delimiter=',')
+  writer.writerow(['id', 'label'])
   for output_row in output_data:
       writer.writerow(output_row)
