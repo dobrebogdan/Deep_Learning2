@@ -1,14 +1,11 @@
 import csv
-from keras.datasets.mnist import load_data
 from matplotlib import pyplot
 from keras.models import Sequential
-from keras.layers import Dense, Reshape, Conv2DTranspose
+from keras.layers import Dense, Reshape, Conv2DTranspose, MaxPooling2D, Rescaling, Flatten
 from keras.layers import Conv2D
 from keras.layers import LeakyReLU
-from tensorflow.keras import layers
 import numpy as np
 import tensorflow as tf
-
 
 batch_size = 32
 img_height = 128
@@ -28,20 +25,19 @@ AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
-
 # define the standalone discriminator model
 def define_discriminator():
     model = Sequential([
-        layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3)),
-        layers.Conv2D(16, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Conv2D(32, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Conv2D(64, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Flatten(),
-        layers.Dense(128, activation='relu'),
-        layers.Dense(num_classes)
+        Rescaling(1. / 255, input_shape=(img_height, img_width, 3)),
+        Conv2D(16, 3, padding='same', activation='relu'),
+        MaxPooling2D(),
+        Conv2D(32, 3, padding='same', activation='relu'),
+        MaxPooling2D(),
+        Conv2D(64, 3, padding='same', activation='relu'),
+        MaxPooling2D(),
+        Flatten(),
+        Dense(128, activation='relu'),
+        Dense(num_classes)
     ])
     # compile model
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -50,19 +46,18 @@ def define_discriminator():
 
 # define the standalone generator model
 def define_generator(latent_dim):
-    model = Sequential()
-    # foundation for 7x7 image
-    n_nodes = 128 * 7 * 7
-    model.add(Dense(n_nodes, input_dim=latent_dim))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Reshape((7, 7, 128)))
-    # upsample to 14x14
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same'))
-    model.add(LeakyReLU(alpha=0.2))
-    # upsample to 28x28
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same'))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Conv2D(1, (7, 7), activation='sigmoid', padding='same'))
+    # foundation for width x height image
+    n_nodes = 128 * img_width * img_height
+    model = Sequential(
+        Dense(n_nodes, input_dim=latent_dim),
+        LeakyReLU(alpha=0.2),
+        Reshape((7, 7, 128)),
+        Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same'),
+        LeakyReLU(alpha=0.2),
+        Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same'),
+        LeakyReLU(alpha=0.2),
+        Conv2D(1, (7, 7), activation='sigmoid', padding='same')
+    )
     return model
 
 
@@ -101,7 +96,6 @@ def generate_latent_points(latent_dim, n_samples):
     x_input = x_input.reshape(n_samples, latent_dim)
     return x_input
 
-
 # use the generator to generate n fake examples, with class labels
 def generate_fake_samples(g_model, latent_dim, n_samples):
     # generate points in latent space
@@ -111,7 +105,6 @@ def generate_fake_samples(g_model, latent_dim, n_samples):
     # create 'fake' class labels (0)
     y = np.zeros((n_samples, 1))
     return X, y
-
 
 # create and save a plot of generated images (reversed grayscale)
 def save_plot(examples, epoch, n=10):
@@ -127,7 +120,6 @@ def save_plot(examples, epoch, n=10):
     filename = 'generated_plot_e%03d.png' % (epoch + 1)
     pyplot.savefig(filename)
     pyplot.close()
-
 
 # evaluate the discriminator, plot generated images, save generator model
 def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_samples=100):
@@ -146,7 +138,6 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # save the generator model tile file
     filename = 'generator_model_%03d.h5' % (epoch + 1)
     g_model.save(filename)
-
 
 # train the generator and discriminator
 def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=256):
