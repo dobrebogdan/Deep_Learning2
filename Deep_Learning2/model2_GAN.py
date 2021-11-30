@@ -1,9 +1,7 @@
 import csv
 from matplotlib import pyplot
 from keras.models import Sequential
-from keras.layers import Dense, Reshape, Conv2DTranspose, MaxPooling2D, Rescaling, Flatten
-from keras.layers import Conv2D
-from keras.layers import LeakyReLU
+from keras.layers import Dense, Reshape, Conv2DTranspose, MaxPooling2D, Rescaling, Flatten, Conv2D, LeakyReLU
 import numpy as np
 import tensorflow as tf
 
@@ -14,16 +12,17 @@ data_dir = './train'
 num_classes = 5
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
-  data_dir,
-  seed=123,
-  image_size=(img_height, img_width),
-  batch_size=batch_size)
+    data_dir,
+    seed=123,
+    image_size=(img_height, img_width),
+    batch_size=batch_size)
 
 class_names = train_ds.class_names
 
 AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+
 
 # define the standalone discriminator model
 def define_discriminator():
@@ -76,7 +75,6 @@ def define_gan(g_model, d_model):
     return model
 
 
-
 # select real samples
 def generate_real_samples(dataset, n_samples):
     # choose random instances
@@ -96,6 +94,7 @@ def generate_latent_points(latent_dim, n_samples):
     x_input = x_input.reshape(n_samples, latent_dim)
     return x_input
 
+
 # use the generator to generate n fake examples, with class labels
 def generate_fake_samples(g_model, latent_dim, n_samples):
     # generate points in latent space
@@ -105,6 +104,7 @@ def generate_fake_samples(g_model, latent_dim, n_samples):
     # create 'fake' class labels (0)
     y = np.zeros((n_samples, 1))
     return X, y
+
 
 # create and save a plot of generated images (reversed grayscale)
 def save_plot(examples, epoch, n=10):
@@ -120,6 +120,7 @@ def save_plot(examples, epoch, n=10):
     filename = 'generated_plot_e%03d.png' % (epoch + 1)
     pyplot.savefig(filename)
     pyplot.close()
+
 
 # evaluate the discriminator, plot generated images, save generator model
 def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_samples=100):
@@ -138,6 +139,7 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # save the generator model tile file
     filename = 'generator_model_%03d.h5' % (epoch + 1)
     g_model.save(filename)
+
 
 # train the generator and discriminator
 def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=256):
@@ -182,22 +184,22 @@ d_model = train(g_model, d_model, gan_model, train_ds, latent_dim)
 
 output_data = []
 with open('test.csv') as file:
-  csv_reader = csv.reader(file)
-  for row in csv_reader:
-    image_path = f"test/{row[0]}"
-    img = tf.keras.utils.load_img(
-      image_path, target_size=(img_height, img_width)
-    )
-    img_array = tf.keras.utils.img_to_array(img)
-    img_array = tf.expand_dims(img_array, 0)  # Create a batch
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+        image_path = f"test/{row[0]}"
+        img = tf.keras.utils.load_img(
+            image_path, target_size=(img_height, img_width)
+        )
+        img_array = tf.keras.utils.img_to_array(img)
+        img_array = tf.expand_dims(img_array, 0)  # Create a batch
 
-    predictions = d_model.predict(img_array)
-    score = tf.nn.softmax(predictions[0])
-    label = np.argmax(score)
-    output_data.append([row[0], int(class_names[label])])
+        predictions = d_model.predict(img_array)
+        score = tf.nn.softmax(predictions[0])
+        label = np.argmax(score)
+        output_data.append([row[0], int(class_names[label])])
 
 with open('output.csv', 'w') as file:
-  writer = csv.writer(file, delimiter=',')
-  writer.writerow(['id', 'label'])
-  for output_row in output_data:
-      writer.writerow(output_row)
+    writer = csv.writer(file, delimiter=',')
+    writer.writerow(['id', 'label'])
+    for output_row in output_data:
+        writer.writerow(output_row)
