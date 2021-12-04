@@ -43,7 +43,7 @@ def custom_activation(output):
 def define_discriminator(in_shape=(28, 28, 1), n_classes=10):
     # image input
     in_image = Input(shape=in_shape)
-    """# downsample
+    # downsample
     fe = Conv2D(128, (3, 3), strides=(2, 2), padding='same')(in_image)
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
@@ -51,9 +51,9 @@ def define_discriminator(in_shape=(28, 28, 1), n_classes=10):
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
     fe = Conv2D(128, (3, 3), strides=(2, 2), padding='same')(fe)
-    fe = LeakyReLU(alpha=0.2)(fe)"""
+    fe = LeakyReLU(alpha=0.2)(fe)
     # flatten feature maps
-    fe = Flatten()(in_image)
+    fe = Flatten()(fe)
     # dropout
     fe = Dropout(0.4)(fe)
     # output layer nodes
@@ -76,18 +76,18 @@ def define_generator(latent_dim):
     # image generator input
     in_lat = Input(shape=(latent_dim,))
     # foundation for 7x7 image
-    n_nodes = 128 * 28 * 28
+    n_nodes = 128 * 7 * 7
     gen = Dense(n_nodes)(in_lat)
     gen = LeakyReLU(alpha=0.2)(gen)
-    gen = Reshape((28, 28, 128))(gen)
-    """# upsample to 14x14
+    gen = Reshape((7, 7, 128))(gen)
+    # upsample to 14x14
     gen = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # upsample to 28x28
     gen = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(gen)
-    gen = LeakyReLU(alpha=0.2)(gen)"""
+    gen = LeakyReLU(alpha=0.2)(gen)
     # output
-    out_layer = Conv2D(1, (28, 28), activation='tanh', padding='same')(gen)
+    out_layer = Conv2D(1, (7, 7), activation='tanh', padding='same')(gen)
     # define model
     model = Model(in_lat, out_layer)
     return model
@@ -123,7 +123,7 @@ def load_training_samples():
                 image_path, target_size=(img_height, img_width)
             )
             img_array = tf.keras.utils.img_to_array(img)
-            #img_array = tf.expand_dims(img_array, 0)
+            img_array = tf.expand_dims(img_array, 0)
             print(np.shape(img_array))
             train_data.append(img_array)
             train_labels.append(float(row[1]))
@@ -136,10 +136,7 @@ def load_training_samples():
 def load_real_samples():
     # load dataset
     (trainX, trainy), (_, _) = load_data()
-    (trainX2, trainy2) = load_training_samples()
-    print('##')
-    print(np.shape(trainX2[0]))
-    print(np.shape(trainX[0]))
+    #(trainX, trainy) = load_training_samples()
     # expand to 3d, e.g. add channels
     X = expand_dims(trainX, axis=-1)
     # convert from ints to floats
@@ -236,7 +233,7 @@ def summarize_performance(step, g_model, c_model, latent_dim, dataset, n_samples
 def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=20, n_batch=100):
     # select supervised dataset
     X_sup, y_sup = select_supervised_samples(dataset)
-    #print(X_sup.shape, y_sup.shape)
+    print(X_sup.shape, y_sup.shape)
     # calculate the number of batches per training epoch
     bat_per_epo = int(dataset[0].shape[0] / n_batch)
     # calculate the number of training iterations
@@ -261,8 +258,7 @@ def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=20
         print('>%d, c[%.3f,%.0f], d[%.3f,%.3f], g[%.3f]' % (i + 1, c_loss, c_acc * 100, d_loss1, d_loss2, g_loss))
         # evaluate the model performance every so often
         if (i + 1) % (bat_per_epo * 1) == 0:
-            pass
-            #summarize_performance(i, g_model, c_model, latent_dim, dataset)
+            summarize_performance(i, g_model, c_model, latent_dim, dataset)
 
 
 # size of the latent space
