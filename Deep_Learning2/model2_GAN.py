@@ -276,6 +276,8 @@ gan_model = define_gan(g_model, d_model)
 dataset = load_real_samples()
 # train model
 d_model = train(g_model, d_model, c_model, gan_model, dataset, latent_dim)
+print("Training done")
+
 output_data = []
 with open('test.csv') as file:
     csv_reader = csv.reader(file)
@@ -285,6 +287,7 @@ with open('test.csv') as file:
             image_path, target_size=(img_height, img_width)
         )
         img_array = tf.keras.utils.img_to_array(img)
+        img_array = np.reshape(img_array, (128, 165))
         img_array = tf.expand_dims(img_array, 0)  # Create a batch
 
         predictions = d_model.predict(img_array)
@@ -292,6 +295,8 @@ with open('test.csv') as file:
         label = np.argmax(score)
         output_data.append([row[0], int(label+1)])
 
+
+print("Predict done")
 with open('output.csv', 'w') as file:
     writer = csv.writer(file, delimiter=',')
     writer.writerow(['id', 'label'])
