@@ -26,7 +26,6 @@ import tensorflow as tf
 
 
 
-batch_size = 32
 img_height = 128
 img_width = 55
 data_dir = './train'
@@ -40,7 +39,7 @@ def custom_activation(output):
 
 # define the standalone supervised and unsupervised discriminator models
 #def define_discriminator(in_shape=(28, 28, 1), n_classes=5):
-def define_discriminator(in_shape=(28, 28, 1), n_classes=10):
+def define_discriminator(in_shape=(128, 165, 1), n_classes=6):
     # image input
     in_image = Input(shape=in_shape)
     """# downsample
@@ -76,10 +75,10 @@ def define_generator(latent_dim):
     # image generator input
     in_lat = Input(shape=(latent_dim,))
     # foundation for 7x7 image
-    n_nodes = 128 * 28 * 28
+    n_nodes = 128 * 128 * 165
     gen = Dense(n_nodes)(in_lat)
     gen = LeakyReLU(alpha=0.2)(gen)
-    gen = Reshape((28, 28, 128))(gen)
+    gen = Reshape((128, 165, 128))(gen)
     """# upsample to 14x14
     gen = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
@@ -87,7 +86,7 @@ def define_generator(latent_dim):
     gen = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)"""
     # output
-    out_layer = Conv2D(1, (28, 28), activation='tanh', padding='same')(gen)
+    out_layer = Conv2D(1, (128, 165), activation='tanh', padding='same')(gen)
     # define model
     model = Model(in_lat, out_layer)
     return model
@@ -124,21 +123,21 @@ def load_training_samples():
             )
             img_array = tf.keras.utils.img_to_array(img)
             #img_array = tf.expand_dims(img_array, 0)
-            print(np.shape(img_array))
+            img_array = np.reshape(img_array, (128, 165))
             train_data.append(img_array)
             train_labels.append(float(row[1]))
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
-    return (train_data, train_labels)
+    return (train_data[:20], train_labels[:20])
 
 
 # load the images
 def load_real_samples():
     # load dataset
-    (trainX, trainy), (_, _) = load_data()
-    (trainX2, trainy2) = load_training_samples()
+    # (trainX2, trainy2), (_, _) = load_data()
+    (trainX, trainy) = load_training_samples()
     print('##')
-    print(np.shape(trainX2[0]))
+    # print(np.shape(trainX2[0]))
     print(np.shape(trainX[0]))
     # expand to 3d, e.g. add channels
     X = expand_dims(trainX, axis=-1)
@@ -151,12 +150,12 @@ def load_real_samples():
 
 
 # select a supervised subset of the dataset, ensures classes are balanced
-def select_supervised_samples(dataset, n_samples=100, n_classes=5):
+def select_supervised_samples(dataset, n_samples=100, n_classes=6):
 #def select_supervised_samples(dataset, n_samples=100, n_classes=10):
     X, y = dataset
     X_list, y_list = list(), list()
     n_per_class = int(n_samples / n_classes)
-    for i in range(1, n_classes+1):
+    for i in range(1, n_classes):
     #for i in range(n_classes):
         # get all images for this class
         X_with_class = X[y == i]
@@ -233,7 +232,7 @@ def summarize_performance(step, g_model, c_model, latent_dim, dataset, n_samples
 
 
 # train the generator and discriminator
-def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=20, n_batch=100):
+def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=100):
     # select supervised dataset
     X_sup, y_sup = select_supervised_samples(dataset)
     #print(X_sup.shape, y_sup.shape)
@@ -261,8 +260,8 @@ def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=20
         print('>%d, c[%.3f,%.0f], d[%.3f,%.3f], g[%.3f]' % (i + 1, c_loss, c_acc * 100, d_loss1, d_loss2, g_loss))
         # evaluate the model performance every so often
         if (i + 1) % (bat_per_epo * 1) == 0:
-            pass
-            #summarize_performance(i, g_model, c_model, latent_dim, dataset)
+            summarize_performance(i, g_model, c_model, latent_dim, dataset)
+    return d_model
 
 
 # size of the latent space
@@ -276,4 +275,25 @@ gan_model = define_gan(g_model, d_model)
 # load image data
 dataset = load_real_samples()
 # train model
-train(g_model, d_model, c_model, gan_model, dataset, latent_dim)
+d_model = train(g_model, d_model, c_model, gan_model, dataset, latent_dim)
+output_data = []
+with open('test.csv') as file:
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+        image_path = f"test/{row[0]}"
+        img = tf.keras.utils.load_img(
+            image_path, target_size=(img_height, img_width)
+        )
+        img_array = tf.keras.utils.img_to_array(img)
+        img_array = tf.expand_dims(img_array, 0)  # Create a batch
+
+        predictions = d_model.predict(img_array)
+        score = tf.nn.softmax(predictions[0])
+        label = np.argmax(score)
+        output_data.append([row[0], int(label+1)])
+
+with open('output.csv', 'w') as file:
+    writer = csv.writer(file, delimiter=',')
+    writer.writerow(['id', 'label'])
+    for output_row in output_data:
+        writer.writerow(output_row)
