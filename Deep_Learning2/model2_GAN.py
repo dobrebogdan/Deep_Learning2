@@ -20,7 +20,6 @@ from keras.layers import LeakyReLU
 from keras.layers import Dropout
 from keras.layers import Lambda
 from keras.layers import Activation
-from matplotlib import pyplot
 from keras import backend
 import tensorflow as tf
 
@@ -48,10 +47,9 @@ def define_discriminator(in_shape=(128, 165, 1), n_classes=6):
     # downsample
     fe = Conv2D(128, (3, 3), strides=(2, 5), padding='same')(fe)
     fe = LeakyReLU(alpha=0.2)(fe)
-    """
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(2, 2), padding='same')(fe)
-    fe = LeakyReLU(alpha=0.2)(fe)"""
+    fe = Conv2D(128, (3, 3), strides=(2, 11), padding='same')(fe)
+    fe = LeakyReLU(alpha=0.2)(fe)
     # flatten feature maps
     fe = Flatten()(fe)
     # dropout
@@ -87,7 +85,7 @@ def define_generator(latent_dim):
     gen = Conv2DTranspose(128, (4, 4), strides=(2, 3), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # output
-    out_layer = Conv2D(1, (128, 165), activation='tanh', padding='same')(gen)
+    out_layer = Conv2D(1, (32, 11), activation='tanh', padding='same')(gen)
     # define model
     model = Model(in_lat, out_layer)
     return model
@@ -129,7 +127,7 @@ def load_training_samples():
             train_labels.append(float(row[1]))
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
-    return (train_data[:100], train_labels[:100])
+    return (train_data[:20], train_labels[:20])
 
 
 # load the images
@@ -202,14 +200,14 @@ def generate_fake_samples(generator, latent_dim, n_samples):
 
 
 # train the generator and discriminator
-def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=100):
+def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=10):
     # select supervised dataset
     X_sup, y_sup = select_supervised_samples(dataset)
     #print(X_sup.shape, y_sup.shape)
     # calculate the number of batches per training epoch
     bat_per_epo = int(dataset[0].shape[0] / n_batch)
     # calculate the number of training iterations
-    n_steps = bat_per_epo * n_epochs
+    n_steps = 1
     # calculate the size of half a batch of samples
     half_batch = int(n_batch / 2)
     print('n_epochs=%d, n_batch=%d, 1/2=%d, b/e=%d, steps=%d' % (n_epochs, n_batch, half_batch, bat_per_epo, n_steps))
@@ -228,7 +226,7 @@ def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10
         g_loss = gan_model.train_on_batch(X_gan, y_gan)
         # summarize loss on this batch
         print('>%d, c[%.3f,%.0f], d[%.3f,%.3f], g[%.3f]' % (i + 1, c_loss, c_acc * 100, d_loss1, d_loss2, g_loss))
-    return d_model
+    return c_model
 
 
 # size of the latent space
@@ -242,7 +240,7 @@ gan_model = define_gan(g_model, d_model)
 # load image data
 dataset = load_real_samples()
 # train model
-d_model = train(g_model, d_model, c_model, gan_model, dataset, latent_dim)
+c_model = train(g_model, d_model, c_model, gan_model, dataset, latent_dim)
 print("Training done")
 
 output_data = []
