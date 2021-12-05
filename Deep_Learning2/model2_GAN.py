@@ -42,13 +42,13 @@ def define_discriminator(in_shape=(128, 165, 1), n_classes=6):
     # image input
     in_image = Input(shape=in_shape)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(2, 3), padding='same')(in_image)
+    fe = Conv2D(128, (3, 3), strides=(8, 11), padding='same')(in_image)
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(2, 5), padding='same')(fe)
+    fe = Conv2D(128, (3, 3), strides=(8, 5), padding='same')(fe)
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(2, 11), padding='same')(fe)
+    fe = Conv2D(128, (3, 3), strides=(2, 3), padding='same')(fe)
     fe = LeakyReLU(alpha=0.2)(fe)
     # flatten feature maps
     fe = Flatten()(fe)
@@ -74,18 +74,18 @@ def define_generator(latent_dim):
     # image generator input
     in_lat = Input(shape=(latent_dim,))
     # foundation for 7x7 image
-    n_nodes = 128 * 32 * 11
+    n_nodes = 128 * 2 * 3
     gen = Dense(n_nodes)(in_lat)
     gen = LeakyReLU(alpha=0.2)(gen)
-    gen = Reshape((32, 11, 128))(gen)
+    gen = Reshape((2, 3, 128))(gen)
     # upsample to 14x14
-    gen = Conv2DTranspose(128, (4, 4), strides=(2, 5), padding='same')(gen)
+    gen = Conv2DTranspose(128, (4, 4), strides=(8, 5), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # upsample to 28x28
-    gen = Conv2DTranspose(128, (4, 4), strides=(2, 3), padding='same')(gen)
+    gen = Conv2DTranspose(128, (4, 4), strides=(8, 11), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # output
-    out_layer = Conv2D(1, (32, 11), activation='tanh', padding='same')(gen)
+    out_layer = Conv2D(1, (2, 3), activation='tanh', padding='same')(gen)
     # define model
     model = Model(in_lat, out_layer)
     return model
@@ -127,7 +127,7 @@ def load_training_samples():
             train_labels.append(float(row[1]))
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
-    return (train_data[:20], train_labels[:20])
+    return (train_data, train_labels)
 
 
 # load the images
@@ -200,14 +200,17 @@ def generate_fake_samples(generator, latent_dim, n_samples):
 
 
 # train the generator and discriminator
-def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=10):
+def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=100):
     # select supervised dataset
     X_sup, y_sup = select_supervised_samples(dataset)
-    #print(X_sup.shape, y_sup.shape)
     # calculate the number of batches per training epoch
     bat_per_epo = int(dataset[0].shape[0] / n_batch)
     # calculate the number of training iterations
-    n_steps = 1
+    # n_steps = bat_per_epo * n_epochs
+    n_steps = 10
+    print('###')
+    print(n_steps)
+    # n_steps = 1
     # calculate the size of half a batch of samples
     half_batch = int(n_batch / 2)
     print('n_epochs=%d, n_batch=%d, 1/2=%d, b/e=%d, steps=%d' % (n_epochs, n_batch, half_batch, bat_per_epo, n_steps))
