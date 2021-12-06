@@ -38,17 +38,17 @@ def custom_activation(output):
 
 # define the standalone supervised and unsupervised discriminator models
 #def define_discriminator(in_shape=(28, 28, 1), n_classes=5):
-def define_discriminator(in_shape=(128, 165, 1), n_classes=6):
+def define_discriminator(in_shape=(128, 165, 1), n_classes=5):
     # image input
     in_image = Input(shape=in_shape)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(8, 11), padding='same')(in_image)
+    fe = Conv2D(128, (3, 3), strides=(4, 4), padding='same')(in_image)
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(8, 5), padding='same')(fe)
+    fe = Conv2D(128, (3, 3), strides=(4, 4), padding='same')(fe)
     fe = LeakyReLU(alpha=0.2)(fe)
     # downsample
-    fe = Conv2D(128, (3, 3), strides=(2, 3), padding='same')(fe)
+    fe = Conv2D(128, (3, 3), strides=(4, 4), padding='same')(fe)
     fe = LeakyReLU(alpha=0.2)(fe)
     # flatten feature maps
     fe = Flatten()(fe)
@@ -60,7 +60,7 @@ def define_discriminator(in_shape=(128, 165, 1), n_classes=6):
     c_out_layer = Activation('softmax')(fe)
     # define and compile supervised discriminator model
     c_model = Model(in_image, c_out_layer)
-    c_model.compile(loss='sparse_categorical_crossentropy', optimizer=Adam(lr=0.0002, beta_1=0.5), metrics=['accuracy'])
+    c_model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer=Adam(lr=0.0002, beta_1=0.5), metrics=['accuracy'])
     # unsupervised output
     d_out_layer = Lambda(custom_activation)(fe)
     # define and compile unsupervised discriminator model
@@ -74,18 +74,18 @@ def define_generator(latent_dim):
     # image generator input
     in_lat = Input(shape=(latent_dim,))
     # foundation for 7x7 image
-    n_nodes = 128 * 2 * 3
+    n_nodes = 128 * 4 * 3
     gen = Dense(n_nodes)(in_lat)
     gen = LeakyReLU(alpha=0.2)(gen)
-    gen = Reshape((2, 3, 128))(gen)
+    gen = Reshape((4, 3, 128))(gen)
     # upsample to 14x14
-    gen = Conv2DTranspose(128, (4, 4), strides=(8, 5), padding='same')(gen)
+    gen = Conv2DTranspose(128, (4, 4), strides=(4, 5), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # upsample to 28x28
     gen = Conv2DTranspose(128, (4, 4), strides=(8, 11), padding='same')(gen)
     gen = LeakyReLU(alpha=0.2)(gen)
     # output
-    out_layer = Conv2D(1, (2, 3), activation='tanh', padding='same')(gen)
+    out_layer = Conv2D(1, (4, 3), activation='tanh', padding='same')(gen)
     # define model
     model = Model(in_lat, out_layer)
     return model
@@ -124,16 +124,16 @@ def load_training_samples():
             #img_array = tf.expand_dims(img_array, 0)
             img_array = np.reshape(img_array, (128, 165))
             train_data.append(img_array)
-            train_labels.append(float(row[1]))
+            train_labels.append(float(row[1]) - 1)
     train_data = np.array(train_data)
     train_labels = np.array(train_labels)
     return (train_data, train_labels)
 
 
+testX = []
 # load the images
 def load_real_samples():
     # load dataset
-    # (trainX2, trainy2), (_, _) = load_data()
     (trainX, trainy) = load_training_samples()
     print('##')
     # print(np.shape(trainX2[0]))
@@ -143,18 +143,18 @@ def load_real_samples():
     # convert from ints to floats
     X = X.astype('float32')
     # scale from [0,255] to [-1,1]
-    X = (X - 127.5) / 127.5
+    X = X / 255.0
     print(X.shape, trainy.shape)
     return [X, trainy]
 
 
 # select a supervised subset of the dataset, ensures classes are balanced
-def select_supervised_samples(dataset, n_samples=100, n_classes=6):
+def select_supervised_samples(dataset, n_samples=100, n_classes=5):
 #def select_supervised_samples(dataset, n_samples=100, n_classes=10):
     X, y = dataset
     X_list, y_list = list(), list()
     n_per_class = int(n_samples / n_classes)
-    for i in range(1, n_classes):
+    for i in range(0, n_classes):
     #for i in range(n_classes):
         # get all images for this class
         X_with_class = X[y == i]
@@ -200,14 +200,13 @@ def generate_fake_samples(generator, latent_dim, n_samples):
 
 
 # train the generator and discriminator
-def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=10, n_batch=100):
+def train(g_model, d_model, c_model, gan_model, dataset, latent_dim, n_epochs=20, n_batch=100):
     # select supervised dataset
     X_sup, y_sup = select_supervised_samples(dataset)
     # calculate the number of batches per training epoch
     bat_per_epo = int(dataset[0].shape[0] / n_batch)
     # calculate the number of training iterations
-    # n_steps = bat_per_epo * n_epochs
-    n_steps = 10
+    n_steps = bat_per_epo * n_epochs
     print('###')
     print(n_steps)
     # n_steps = 1
@@ -260,8 +259,8 @@ with open('test.csv') as file:
             image_path, target_size=(img_height, img_width)
         )
         img_array = tf.keras.utils.img_to_array(img)
-        img_array = np.reshape(img_array, (128, 165))
-        img_array = tf.expand_dims(img_array, 0)  # Create a batch
+        img_array = np.reshape(img_array, (128, 165)).astype('float32')
+        img_array = tf.expand_dims(img_array, -1)  # Create a batch
         img_arrays.append(img_array)
         image_ids.append(row[0])
     img_arrays = np.array(img_arrays).reshape((-1, 128, 165, 1))
