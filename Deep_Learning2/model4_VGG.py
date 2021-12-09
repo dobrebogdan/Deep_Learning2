@@ -7,8 +7,8 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
 batch_size = 32
-img_height = height = 128
-img_width = width =  55
+img_height = 128
+img_width = 55
 depth = 3
 data_dir = './train'
 num_classes = classes = 5
@@ -26,16 +26,13 @@ AUTOTUNE = tf.data.AUTOTUNE
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
 model = Sequential()
-inputShape = (height, width, depth)
+input_shape = (img_height, img_width, depth)
 chanDim = -1
-
-# CONV => RELU => POOL layer set
-model.add(layers.Conv2D(32, (3, 3), padding="same", input_shape=inputShape))
+model.add(layers.Conv2D(32, (3, 3), padding="same", input_shape=input_shape))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
 model.add(layers.MaxPooling2D(pool_size=(2, 2)))
 model.add(layers.Dropout(0.25))
-# (CONV => RELU) * 2 => POOL layer set
 model.add(layers.Conv2D(64, (3, 3), padding="same"))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
@@ -44,7 +41,6 @@ model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
 model.add(layers.MaxPooling2D(pool_size=(2, 2)))
 model.add(layers.Dropout(0.25))
-# (CONV => RELU) * 3 => POOL layer set
 model.add(layers.Conv2D(128, (3, 3), padding="same"))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
@@ -56,7 +52,6 @@ model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
 model.add(layers.MaxPooling2D(pool_size=(2, 2)))
 model.add(layers.Dropout(0.25))
-# (CONV => RELU) * 3 => POOL layer set
 model.add(layers.Conv2D(128, (3, 3), padding="same"))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
@@ -68,13 +63,11 @@ model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
 model.add(layers.MaxPooling2D(pool_size=(2, 2)))
 model.add(layers.Dropout(0.25))
-# first (and only) set of FC => RELU layers
 model.add(layers.Flatten())
 model.add(layers.Dense(512))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization())
 model.add(layers.Dropout(0.5))
-#softmax classifier
 model.add(layers.Dense(classes))
 model.add(layers.Activation("softmax"))
 
