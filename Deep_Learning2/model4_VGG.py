@@ -1,4 +1,4 @@
-# Submission accuracy: 0.52
+# Submission accuracy: 0.629
 
 import csv
 import numpy as np
