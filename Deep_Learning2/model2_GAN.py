@@ -46,10 +46,11 @@ def define_discriminator(in_shape=(128, 165, 1), n_classes=5):
     fe = Dense(n_classes)(fe)
     c_out_layer = Activation('softmax')(fe)
     classifier = Model(in_image, c_out_layer)
-    classifier.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer=Adam(lr=0.0002, beta_1=0.5), metrics=['accuracy'])
+    classifier.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam',
+                       metrics=['accuracy'])
     d_out_layer = Lambda(custom_activation)(fe)
     discriminator = Model(in_image, d_out_layer)
-    discriminator.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0002, beta_1=0.5))
+    discriminator.compile(loss='binary_crossentropy', optimizer='adam')
     return discriminator, classifier
 
 
@@ -146,7 +147,7 @@ def generate_fake_samples(generator, latent_dim, n_samples):
     return images, y
 
 
-def train(generator, discriminator, classifier, gan, dataset, latent_dim, n_epochs=20, n_batch=100):
+def train(generator, discriminator, classifier, gan, dataset, latent_dim, n_epochs=40, n_batch=100):
     X_sup, y_sup = select_supervised_samples(dataset)
     bat_per_epo = int(dataset[0].shape[0] / n_batch)
     n_steps = bat_per_epo * n_epochs

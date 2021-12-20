@@ -28,31 +28,36 @@ train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 from tensorflow.keras.applications.vgg16 import VGG16
 
 base_model = VGG16(input_shape = (128, 55, 3), # Shape of our images
-include_top = False, # Leave out the last fully connected layer
-weights = 'imagenet')
+include_top=False,
+weights = 'imagenet'
+)
 
 
 for layer in base_model.layers:
     layer.trainable = False
 
 # Flatten the output layer to 1 dimension
-x = layers.Flatten()(base_model.output)
+x = layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3))(base_model.output)
+
+x = layers.Flatten()(x)
 
 # Add a fully connected layer with 512 hidden units and ReLU activation
-x = layers.Dense(512, activation='relu')(x)
-
+x = layers.Dense(1024, activation='relu')(x)
+"""x = layers.Dense(256, activation='relu')(x)
+x = layers.Dense(256, activation='relu')(x)
+x = layers.Dense(256, activation='relu')(x)
+"""
 # Add a dropout rate of 0.5
 x = layers.Dropout(0.5)(x)
 
-# Add a final sigmoid layer with 1 node for classification output
-x = layers.Dense(num_classes , activation='sigmoid')(x)
+x = layers.Dense(num_classes)(x)
 
 model = tf.keras.models.Model(base_model.input, x)
 
 model.compile(optimizer = 'adam',
-              loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = ['acc'])
+              loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = ['accuracy'])
 
-vgghist = model.fit(train_ds, validation_data = train_ds, steps_per_epoch = 100, epochs = 10)
+vgghist = model.fit(train_ds, epochs = 40)
 
 output_data = []
 with open('test.csv') as file:

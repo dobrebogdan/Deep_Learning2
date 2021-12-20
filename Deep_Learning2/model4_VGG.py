@@ -28,6 +28,7 @@ train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 model = Sequential()
 input_shape = (img_height, img_width, depth)
 chanDim = -1
+# model.add(layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3)))
 model.add(layers.Conv2D(32, (3, 3), padding="same", input_shape=input_shape))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization(axis=chanDim))
@@ -68,6 +69,10 @@ model.add(layers.Dense(512))
 model.add(layers.Activation("relu"))
 model.add(layers.BatchNormalization())
 model.add(layers.Dropout(0.5))
+"""model.add(layers.Dense(202))
+model.add(layers.Activation("relu"))
+model.add(layers.BatchNormalization())
+model.add(layers.Dropout(0.5))"""
 model.add(layers.Dense(classes))
 model.add(layers.Activation("softmax"))
 
@@ -77,7 +82,7 @@ model.compile(optimizer='adam',
 
 model.summary()
 
-epochs = 20
+epochs = 50
 history = model.fit(
     train_ds,
     epochs=epochs
