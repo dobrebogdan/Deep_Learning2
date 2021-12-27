@@ -24,13 +24,9 @@ AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
-
 from tensorflow.keras.applications.vgg16 import VGG16
 
-base_model = VGG16(input_shape = (128, 55, 3), # Shape of our images
-include_top=False,
-weights = 'imagenet'
-)
+base_model = VGG16(input_shape=(128, 55, 3), include_top=False, weights = 'imagenet')
 
 
 for layer in base_model.layers:
@@ -43,10 +39,6 @@ x = layers.Flatten()(x)
 
 # Add a fully connected layer with 512 hidden units and ReLU activation
 x = layers.Dense(1024, activation='relu')(x)
-"""x = layers.Dense(256, activation='relu')(x)
-x = layers.Dense(256, activation='relu')(x)
-x = layers.Dense(256, activation='relu')(x)
-"""
 # Add a dropout rate of 0.5
 x = layers.Dropout(0.5)(x)
 
@@ -57,7 +49,7 @@ model = tf.keras.models.Model(base_model.input, x)
 model.compile(optimizer = 'adam',
               loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = ['accuracy'])
 
-vgghist = model.fit(train_ds, epochs = 40)
+model.fit(train_ds, epochs = 50)
 
 output_data = []
 with open('test.csv') as file:

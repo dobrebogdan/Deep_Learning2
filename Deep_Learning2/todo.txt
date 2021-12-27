@@ -1,0 +1,6 @@
+Use models 3 and 5;
+1) Refactor the code
+2) Add comments
+3) Write some docs
+4) 5-mean cross validation with mean absolute error
+5) Create good directory structure
