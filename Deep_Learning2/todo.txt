@@ -4,3 +4,5 @@ Use models 3 and 5;
 3) Write some docs
 4) 5-mean cross validation with mean absolute error
 5) Create good directory structure
+
+model 5: 25 epochs train accuracy: 0.81

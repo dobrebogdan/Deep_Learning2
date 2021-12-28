@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
+from sklearn.model_selection import KFold
 
 batch_size = 32
 img_height = 128
@@ -13,6 +14,8 @@ depth = 3
 data_dir = './train'
 num_classes = 5
 epochs = 25
+n_splits = 5
+
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
@@ -27,55 +30,59 @@ AUTOTUNE = tf.data.AUTOTUNE
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 input_shape = (img_height, img_width, depth)
 chanDim = -1
-model = Sequential([
-    layers.Conv2D(64, (3, 3), padding="same", input_shape=input_shape),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(64, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(64, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.MaxPooling2D(pool_size=(2, 2),),
-    layers.Dropout(0.25),
-    layers.Conv2D(128, (3, 3), padding="same", input_shape=input_shape),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(128, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(128, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.MaxPooling2D(pool_size=(2, 2),),
-    layers.Dropout(0.25),
-    layers.Conv2D(128, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(128, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.Conv2D(128, (3, 3), padding="same"),
-    layers.ReLU(),
-    layers.BatchNormalization(axis=chanDim),
-    layers.MaxPooling2D(pool_size=(2, 2),),
-    layers.Dropout(0.25),
-    layers.Flatten(),
-    layers.Dense(512),
-    layers.ReLU(),
-    layers.BatchNormalization(),
-    layers.Dropout(0.5),
-    layers.Dense(num_classes),
-    layers.Activation("softmax")
-])
-model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
 
-model.summary()
+def get_model():
+    model = Sequential([
+        layers.Conv2D(64, (3, 3), padding="same", input_shape=input_shape),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(64, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(64, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.Dropout(0.25),
+        layers.Conv2D(128, (3, 3), padding="same", input_shape=input_shape),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(128, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(128, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.Dropout(0.25),
+        layers.Conv2D(128, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(128, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.Conv2D(128, (3, 3), padding="same"),
+        layers.ReLU(),
+        layers.BatchNormalization(axis=chanDim),
+        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.Dropout(0.25),
+        layers.Flatten(),
+        layers.Dense(512),
+        layers.ReLU(),
+        layers.BatchNormalization(),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes),
+        layers.Activation("softmax")
+    ])
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+
+    model.summary()
+    return model
 
 def train_and_predict():
+    model = get_model()
     model.fit(train_ds, epochs=epochs)
     # model.save('./model5')
 
@@ -101,4 +108,31 @@ def train_and_predict():
         for output_row in output_data:
             writer.writerow(output_row)
 
-train_and_predict()
+def n_fold_cross_validation():
+    train_ds = tf.keras.utils.image_dataset_from_directory(
+        data_dir,
+        image_size=(img_height, img_width),
+        batch_size=15500)
+    train_data = np.array([])
+    train_labels = np.array([])
+    for x, y in train_ds:
+        train_data = x.numpy()
+        train_labels = y.numpy()
+    kfold = KFold(n_splits=n_splits, shuffle=True)
+    kfold_split = kfold.split(train_data, train_labels)
+    step = 0
+    accuracies = []
+    for curr_train, curr_test in kfold_split:
+        step += 1
+        model = get_model()
+        model.fit(train_data[curr_train], train_labels[curr_train], batch_size=batch_size, epochs=epochs)
+        results = model.evaluate(train_data[curr_test], train_labels[curr_test])
+        print(f'Step {step}: Loss - {results[0]}, Accuracy - {results[1]}')
+        accuracies.append(results[1])
+    with open('results.csv', 'w') as file:
+        writer = csv.writer(file, delimiter=',')
+        for accuracy in accuracies:
+            writer.writerow(str(accuracy))
+
+# train_and_predict()
+n_fold_cross_validation()
