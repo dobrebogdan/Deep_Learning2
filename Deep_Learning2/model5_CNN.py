@@ -80,12 +80,12 @@ model.compile(optimizer='adam',
 
 model.summary()
 
-epochs = 50
+epochs = 25
 history = model.fit(
     train_ds,
     epochs=epochs
 )
-model.save('./model')
+model.save('./model5')
 
 output_data = []
 with open('test.csv') as file:

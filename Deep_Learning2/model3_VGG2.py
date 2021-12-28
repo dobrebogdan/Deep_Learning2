@@ -50,6 +50,7 @@ model.compile(optimizer = 'adam',
               loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = ['accuracy'])
 
 model.fit(train_ds, epochs = 50)
+model.save('./model3')
 
 output_data = []
 with open('test.csv') as file:
