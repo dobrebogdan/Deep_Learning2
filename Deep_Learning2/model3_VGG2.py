@@ -4,6 +4,7 @@
 import csv
 import numpy as np
 import tensorflow as tf
+from keras.optimizer_v2.adam import Adam
 from tensorflow.keras import layers
 from tensorflow.keras.applications.vgg16 import VGG16
 from sklearn.model_selection import KFold
@@ -34,7 +35,7 @@ AUTOTUNE = tf.data.AUTOTUNE
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
 # Function used for getting the model
-def get_model():
+def get_model(learning_rate = None):
     # The VGG16 model
     vgg_model = VGG16(input_shape=(128, 55, 3), include_top=False, weights='imagenet')
     for layer in vgg_model.layers:
@@ -58,7 +59,11 @@ def get_model():
     model = tf.keras.models.Model(vgg_model.input, output)
 
     # Compiling the model
-    model.compile(optimizer='adam',
+    optimizer = 'adam'
+    # Setting Adam optimizer with the right learning rate if we get one
+    if learning_rate:
+        optimizer = Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer,
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
     # Returning the model
@@ -122,7 +127,6 @@ def n_fold_cross_validation():
     accuracies = []
     # iterating through the different splits
     for curr_train, curr_test in kfold_split:
-        step += 1
         model = get_model()
         # training the model
         model.fit(train_data[curr_train], train_labels[curr_train], batch_size=batch_size, epochs=epochs)
@@ -137,7 +141,40 @@ def n_fold_cross_validation():
         for accuracy in accuracies:
             writer.writerow(str(accuracy))
 
+# function used for searching for an optimal learning rate
+def grid_search_learning_rate():
+    """
+        Loading the dataset from the images directory. I split the directory in 5 subdirectories, one for each class.
+        Batch size is 15500 to get all the data in one go.
+        """
+    train_ds = tf.keras.utils.image_dataset_from_directory(
+        data_dir,
+        image_size=(img_height, img_width),
+        batch_size=15500)
+    train_data = np.array([])
+    train_labels = np.array([])
+    # Getting the train data and test data
+    for x, y in train_ds:
+        train_data = x.numpy()
+        train_labels = y.numpy()
+    # searching for a good learning rate
+    for learning_rate in [0.001, 0.01, 0.1]:
+        kfold = KFold(n_splits=n_splits, shuffle=True)
+        kfold_split = kfold.split(train_data, train_labels)
+        # iterating through the different splits
+        for curr_train, curr_test in kfold_split:
+            model = get_model(learning_rate)
+            # training the model; using fewer epochs because of how much time training takes for all learning rates
+            model.fit(train_data[curr_train], train_labels[curr_train], batch_size=batch_size, epochs=7)
+            # getting the evaluation results
+            results = model.evaluate(train_data[curr_test], train_labels[curr_test])
+            # printing the loss and accuracy
+            print(f'Learning rate {learning_rate}: Loss - {results[0]}, Accuracy - {results[1]}')
+            # we are only interested in a single validation in this case
+            break
 
 # Each of these functions serve a different purpose and should be commented or uncommented as needed
 # train_and_predict()
-n_fold_cross_validation()
+# n_fold_cross_validation()
+grid_search_learning_rate()
+
