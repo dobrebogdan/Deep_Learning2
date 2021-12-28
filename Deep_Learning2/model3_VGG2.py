@@ -14,7 +14,6 @@ num_classes = 5
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
-    seed=123,
     image_size=(img_height, img_width),
     batch_size=batch_size)
 
@@ -25,16 +24,12 @@ AUTOTUNE = tf.data.AUTOTUNE
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
 from tensorflow.keras.applications.vgg16 import VGG16
-
-base_model = VGG16(input_shape=(128, 55, 3), include_top=False, weights = 'imagenet')
-
-
-for layer in base_model.layers:
+vgg_model = VGG16(input_shape=(128, 55, 3), include_top=False, weights='imagenet')
+for layer in vgg_model.layers:
     layer.trainable = False
 
 # Flatten the output layer to 1 dimension
-x = layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3))(base_model.output)
-
+x = layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3))(vgg_model.output)
 x = layers.Flatten()(x)
 
 # Add a fully connected layer with 512 hidden units and ReLU activation
@@ -44,13 +39,14 @@ x = layers.Dropout(0.5)(x)
 
 x = layers.Dense(num_classes)(x)
 
-model = tf.keras.models.Model(base_model.input, x)
+model = tf.keras.models.Model(vgg_model.input, x)
 
-model.compile(optimizer = 'adam',
-              loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = ['accuracy'])
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics = ['accuracy'])
 
-model.fit(train_ds, epochs = 50)
-model.save('./model3')
+model.fit(train_ds, epochs=50)
+# model.save('./model3')
 
 output_data = []
 with open('test.csv') as file:
