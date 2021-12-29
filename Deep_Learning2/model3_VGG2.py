@@ -17,7 +17,7 @@ epochs_number = 15
 splits_number = 5
 
 """ 
-Loading the dataset from the images directory. I split the directory in 5 subdirectories, one for each class.
+Loading the dataset from the images directory. I previously split the directory in 5 subdirectories, one for each class.
 """
 train_dataset = tf.keras.utils.image_dataset_from_directory(training_directory, image_size=(imag_height, imag_width),
                                                             batch_size=batch_size)
@@ -41,10 +41,15 @@ def get_model(learning_rate=None):
 
     # custom layers to be added to the VGG
     custom_layers = [
+        # Rescailing image
         layers.Rescaling(1. / 255, input_shape=(imag_height, imag_width, 3)),
+        # Flattening output
         layers.Flatten(),
+        # Dense layer
         layers.Dense(1024, activation='relu'),
+        # Dropout layer
         layers.Dropout(0.5),
+        # Dense layer with 5 nodes
         layers.Dense(classes_number)
     ]
 
@@ -166,6 +171,6 @@ def grid_search_learning_rate():
             break
 
 # Each of these functions serve a different purpose and should be commented or uncommented as needed
-# train_and_predict()
+train_and_predict()
 # n_fold_cross_validation()
-grid_search_learning_rate()
+# grid_search_learning_rate()

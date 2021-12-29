@@ -41,45 +41,63 @@ normalization_axis = -1
 def get_model(learning_rate=None):
     # The sequential model and its layers
     model = Sequential([
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(64, (3, 3), padding="same", input_shape=input_shape),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(64, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(64, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Max pooling and dropout layers
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same", input_shape=input_shape),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Max pooling and dropout layers
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Conv2D, Relu and Batch normalization layers
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
         layers.BatchNormalization(axis=normalization_axis),
+        # Max pooling and dropout layers
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
+        # Flatten layer
         layers.Flatten(),
+        # Dense layer
         layers.Dense(512),
+        # Relu and Batch normalization layers
         layers.ReLU(),
         layers.BatchNormalization(),
+        # Dropout layer
         layers.Dropout(0.5),
+        # Dense layer with 5 nodes
         layers.Dense(classes_number),
+        # Softmax activation layer
         layers.Activation("softmax")
     ])
     optimizer = 'adam'
@@ -191,7 +209,7 @@ def grid_search_learning_rate():
             # we are only interested in a single validation in this case
             break
 
-# Each of these functions serve a different purpose and should be commented or uncommented as needed
-# train_and_predict()
+# Each of these functions serves a different purpose and should be commented or uncommented as needed
+train_and_predict()
 # n_fold_cross_validation()
-grid_search_learning_rate()
+# grid_search_learning_rate()
