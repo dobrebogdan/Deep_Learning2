@@ -1,95 +1,92 @@
-# Submission accuracy: 0.629
-# 25 epochs, accuracy: 0.62
-
+# Importing libraries
 import csv
-import numpy as np
-import tensorflow as tf
 from keras.optimizer_v2.adam import Adam
+import numpy as np
+from sklearn.model_selection import KFold
+import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
-from sklearn.model_selection import KFold
 
-# variables for the program
+# some constants for the program
 batch_size = 32
-img_height = 128
-img_width = 55
+imag_height = 128
+imag_width = 55
 depth = 3
-data_dir = './train'
-num_classes = 5
-epochs = 25
-n_splits = 5
+training_directory = './train'
+classes_number = 5
+epochs_number = 25
+splits_number = 5
 
 """ 
 Loading the dataset from the images directory. I split the directory in 5 subdirectories, one for each class.
 Batch size is 15500 to get all the data in one go.
 """
-train_ds = tf.keras.utils.image_dataset_from_directory(
-    data_dir,
-    seed=123,
-    image_size=(img_height, img_width),
+train_dataset = tf.keras.utils.image_dataset_from_directory(
+    training_directory,
+    seed=17,
+    image_size=(imag_height, imag_width),
     batch_size=batch_size)
 
 # Getting the classnames
-class_names = train_ds.class_names
+class_names = train_dataset.class_names
 
 # using the AUTOTUNE for the prefetch function to decide the number of prefetched elements at runtime
 AUTOTUNE = tf.data.AUTOTUNE
 
-train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
-input_shape = (img_height, img_width, depth)
-chanDim = -1
+train_dataset = train_dataset.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+input_shape = (imag_height, imag_width, depth)
+normalization_axis = -1
 
 # Function used for getting the model
-def get_model(learning_rate):
+def get_model(learning_rate=None):
     # The sequential model and its layers
     model = Sequential([
         layers.Conv2D(64, (3, 3), padding="same", input_shape=input_shape),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(64, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(64, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
-        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.BatchNormalization(axis=normalization_axis),
+        layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
         layers.Conv2D(128, (3, 3), padding="same", input_shape=input_shape),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
-        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.BatchNormalization(axis=normalization_axis),
+        layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
+        layers.BatchNormalization(axis=normalization_axis),
         layers.Conv2D(128, (3, 3), padding="same"),
         layers.ReLU(),
-        layers.BatchNormalization(axis=chanDim),
-        layers.MaxPooling2D(pool_size=(2, 2), ),
+        layers.BatchNormalization(axis=normalization_axis),
+        layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.25),
         layers.Flatten(),
         layers.Dense(512),
         layers.ReLU(),
         layers.BatchNormalization(),
         layers.Dropout(0.5),
-        layers.Dense(num_classes),
+        layers.Dense(classes_number),
         layers.Activation("softmax")
     ])
     optimizer = 'adam'
     # Setting Adam optimizer with the right learning rate if we get one
     if learning_rate:
         optimizer = Adam(learning_rate=learning_rate)
-    model.compile(optimizer=optimizer,
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
 
     # Information about the model
@@ -101,8 +98,8 @@ def train_and_predict():
     # getting the model
     model = get_model()
     # training the model
-    model.fit(train_ds, epochs=epochs)
-    # model.save('./model5')
+    model.fit(train_dataset, epochs=epochs_number)
+    # model.save('./cnn_model')
 
     output_data = []
     # predicting and writing the data to the output file
@@ -111,9 +108,7 @@ def train_and_predict():
         for row in csv_reader:
             image_path = f"test/{row[0]}"
             # reading an image
-            img = tf.keras.utils.load_img(
-                image_path, target_size=(img_height, img_width)
-            )
+            img = tf.keras.utils.load_img(image_path, target_size=(imag_height, imag_width))
             img_array = tf.keras.utils.img_to_array(img)
             img_array = tf.expand_dims(img_array, 0)  # Create a batch
             # prediction for the image
@@ -136,18 +131,16 @@ def train_and_predict():
 # used for 5 fold cross validation
 def n_fold_cross_validation():
     # Getting the data from the image directory.
-    train_ds = tf.keras.utils.image_dataset_from_directory(
-        data_dir,
-        image_size=(img_height, img_width),
-        batch_size=15500)
+    train_dataset = tf.keras.utils.image_dataset_from_directory(training_directory, image_size=(imag_height, imag_width),
+                                                                batch_size=15500)
     train_data = np.array([])
     train_labels = np.array([])
     # Getting the train data and test data
-    for x, y in train_ds:
+    for x, y in train_dataset:
         train_data = x.numpy()
         train_labels = y.numpy()
     # Using KFold to split in 5 parts for cross validation
-    kfold = KFold(n_splits=n_splits, shuffle=True)
+    kfold = KFold(n_splits=splits_number, shuffle=True)
     kfold_split = kfold.split(train_data, train_labels)
     step = 0
     accuracies = []
@@ -156,7 +149,7 @@ def n_fold_cross_validation():
         step += 1
         model = get_model()
         # training the model
-        model.fit(train_data[curr_train], train_labels[curr_train], batch_size=batch_size, epochs=epochs)
+        model.fit(train_data[curr_train], train_labels[curr_train], batch_size=batch_size, epochs=epochs_number)
         # getting the evaluation results
         results = model.evaluate(train_data[curr_test], train_labels[curr_test])
         # printing the loss and accuracy
@@ -171,22 +164,20 @@ def n_fold_cross_validation():
 # function used for searching for an optimal learning rate
 def grid_search_learning_rate():
     """
-        Loading the dataset from the images directory. I split the directory in 5 subdirectories, one for each class.
+        Loading the dataset from the images' directory. I split the directory in 5 subdirectories, one for each class.
         Batch size is 15500 to get all the data in one go.
         """
-    train_ds = tf.keras.utils.image_dataset_from_directory(
-        data_dir,
-        image_size=(img_height, img_width),
-        batch_size=15500)
+    train_dataset = tf.keras.utils.image_dataset_from_directory(training_directory, image_size=(imag_height, imag_width),
+                                                                batch_size=15500)
     train_data = np.array([])
     train_labels = np.array([])
     # Getting the train data and test data
-    for x, y in train_ds:
+    for x, y in train_dataset:
         train_data = x.numpy()
         train_labels = y.numpy()
     # searching for a good learning rate
     for learning_rate in [0.001, 0.01, 0.1]:
-        kfold = KFold(n_splits=n_splits, shuffle=True)
+        kfold = KFold(n_splits=splits_number, shuffle=True)
         kfold_split = kfold.split(train_data, train_labels)
         # iterating through the different splits
         for curr_train, curr_test in kfold_split:
